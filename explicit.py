@@ -52,7 +52,7 @@ def readFolders(albums:list) -> bool:
         fullpath = sys.argv[1] + "/" + name
         if os.path.isdir(fullpath):
             print("Searching for album: " + name)
-            results = [a for a in albums if a["wrapperType"] != "artist" and a["collectionName"].lower() == name.lower()]
+            results = [a for a in albums if a["wrapperType"] != "artist" and name.lower() in a["collectionName"].lower()]
             if len(results) != 0:
                 songs = getSongs(results[0]["collectionId"])
                 if len(songs) == 0:
@@ -63,18 +63,20 @@ def readFolders(albums:list) -> bool:
                     metadata = eyed3.load(fullpath + "/" + file)
                     title = metadata.tag.title
                     print("Searching song: "+ title)
-                    result = [a for a in songs if a["wrapperType"] != "collection" and a["trackName"].lower() == title.lower()]
+                    result = [a for a in songs if a["wrapperType"] != "collection" and title.lower() in a["trackName"].lower()]
                     if len(result) == 0:
                         print("Song not found!")
                         errorSongs.append(title)
                         continue
-                    explicit = result[0]["trackExplicitness"]
-                    comment = metadata.tag.comments[0].text
-                    if "[EXPLICIT:" in comment:
-                        print("This song is already tagged, skipping...")
-                        continue
+                    explicit = result[0]["trackExplicitness"] #Explicit, Cleaned or notExplicit
+                    if len(metadata.tag.comments) > 0:
+                        comment = metadata.tag.comments[0].text
+                        if "[EXPLICIT:" in comment:
+                            print("This song is already tagged, skipping...")
+                            continue
+                    else:
+                        comment = ""
                     metadata.tag.comments.set(comment + " [EXPLICIT: " + explicit + "]")
-                    #TODO: Make sure it's not already tagged.
                     metadata.tag.save()
                     taggedSongs.append(title)
     return True
@@ -89,7 +91,7 @@ def getSongs(id:int) -> list:
         return []
 
 def printHelp():
-    print("USAGE: explicit.py FOLDERPATH")
+    print("USAGE: explicit.py <Path to Artist Folder>")
 
 if __name__  == "__main__":
     main()

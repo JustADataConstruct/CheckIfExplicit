@@ -3,3 +3,5 @@ old/*
 venv/*
 music/*
 idea.txt
+
+debug_cleanComments.py
