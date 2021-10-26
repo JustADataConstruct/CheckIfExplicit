@@ -57,7 +57,8 @@ def readFolders(albums:list) -> bool:
         fullpath = sys.argv[1] + "/" + name
         if os.path.isdir(fullpath):
             print("Searching for album: " + name)
-            results = [a for a in albums if a["wrapperType"] != "artist" and name.lower() in a["collectionName"].lower()]
+            cleanedAlbum = name.split("(")[0].split("[")[0]
+            results = [a for a in albums if a["wrapperType"] != "artist" and cleanedAlbum.lower() in a["collectionName"].lower()]
             if len(results) != 0:
                 songs = getSongs(results[0]["collectionId"])
                 if len(songs) == 0:
@@ -68,10 +69,11 @@ def readFolders(albums:list) -> bool:
                     metadata = eyed3.load(fullpath + "/" + file)
                     title = metadata.tag.title
                     print("Searching song: "+ title)
-                    result = [a for a in songs if a["wrapperType"] != "collection" and title.lower() in a["trackName"].lower()]
+                    cleaned = title.split("(")[0].split("[")[0] #Get the first part of a song before parenthesis, to maximize chance of finding results.
+                    result = [a for a in songs if a["wrapperType"] != "collection" and cleaned.lower() in a["trackName"].lower()]
                     if len(result) == 0:
                         print("Song not found!")
-                        errorSongs.append(title)
+                        errorSongs.append(fullpath + "/" + file)
                         continue
                     explicit = result[0]["trackExplicitness"]
                     if len(metadata.tag.user_text_frames) > 0 and "ITUNESADVISORY" in metadata.tag.user_text_frames:
@@ -79,7 +81,10 @@ def readFolders(albums:list) -> bool:
                         continue
                     metadata.tag.user_text_frames.set(str(ratings[explicit]),"ITUNESADVISORY")
                     metadata.tag.save()
-                    taggedSongs.append(title)
+                    taggedSongs.append(fullpath + "/" + file)
+            else:
+                print("Album not found!")
+                
     return True
 def getSongs(id:int) -> list:
     print("Getting songs...")
