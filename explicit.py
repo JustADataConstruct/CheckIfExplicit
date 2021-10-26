@@ -48,6 +48,11 @@ def getAllAlbumsByArtist(artistId:int) -> list:
         return []
 
 def readFolders(albums:list) -> bool:
+    ratings = {
+        'notExplicit' :0,
+        'explicit' :1,
+        'cleaned':2,
+    }
     for name in os.listdir(sys.argv[1]):
         fullpath = sys.argv[1] + "/" + name
         if os.path.isdir(fullpath):
@@ -68,15 +73,11 @@ def readFolders(albums:list) -> bool:
                         print("Song not found!")
                         errorSongs.append(title)
                         continue
-                    explicit = result[0]["trackExplicitness"] #Explicit, Cleaned or notExplicit
-                    if len(metadata.tag.comments) > 0:
-                        comment = metadata.tag.comments[0].text
-                        if "[EXPLICIT:" in comment:
-                            print("This song is already tagged, skipping...")
-                            continue
-                    else:
-                        comment = ""
-                    metadata.tag.comments.set(comment + " [EXPLICIT: " + explicit + "]")
+                    explicit = result[0]["trackExplicitness"]
+                    if len(metadata.tag.user_text_frames) > 0 and "ITUNESADVISORY" in metadata.tag.user_text_frames:
+                        print("This song is already tagged, skipping...")
+                        continue
+                    metadata.tag.user_text_frames.set(str(ratings[explicit]),"ITUNESADVISORY")
                     metadata.tag.save()
                     taggedSongs.append(title)
     return True
