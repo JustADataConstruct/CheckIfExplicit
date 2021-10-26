@@ -70,6 +70,9 @@ def readFolders(albums:list) -> bool:
                         continue
                     explicit = result[0]["trackExplicitness"]
                     comment = metadata.tag.comments[0].text
+                    if "[EXPLICIT:" in comment:
+                        print("This song is already tagged, skipping...")
+                        continue
                     metadata.tag.comments.set(comment + " [EXPLICIT: " + explicit + "]")
                     #TODO: Make sure it's not already tagged.
                     metadata.tag.save()
