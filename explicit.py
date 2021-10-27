@@ -61,6 +61,7 @@ class CheckForExplicit():
                 results = [a for a in albums if a["wrapperType"] != "artist" and cleanedAlbum.lower() in a["collectionName"].lower()]
                 if len(results) != 0:
                     songs = self.getSongs(results[0]["collectionId"])
+                    self.handleAlbum(fullpath,songs)
                     if len(songs) == 0:
                         return False
                 else:
