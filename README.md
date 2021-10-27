@@ -1,12 +1,39 @@
 ## CheckIfExplicit
-A Python script to check if a particular song, adequately tagged, is marked as "Explicit" on Apple's iTunes database, using Apple's public APIs and the python Requests library to check and then the eyed3 library to write this in the file itself.
+A Python script to check if a particular song, adequately tagged, is marked as "Explicit" on Apple's iTunes database, using [Apple's public APIs](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/index.html#//apple_ref/doc/uid/TP40017632-CH3-SW1) and the python [Requests](https://docs.python-requests.org/en/latest/) library to check and then the [eyed3](https://github.com/nicfit/eyeD3) library to write this in the file itself.
 
-WIP.
+### Install
+- Download or clone the repository
+- Run `pip install -r requeriments.txt` to install the required libraries
+- Run `explicit.py <FOLDER PATH> [-c]`
 
-The script expects as an argument a path to a folder with folders inside. The script will use the name of the root folder as the Artist Name and make two requests to the iTunes API to get the Artist ID and then the list of albums.
+### Usage
 
-Then, for each folder inside the root folder, the script will get the name of the folder as the Album Name and try to find it on the saved request. If it does find it, it will make a new request for the list of songs from that album.
+The script expects as its first argument a path to a folder named as an Artist, containing one or more folders inside names as an Album, containing one or more audio files inside.
 
-it will then iterate over each audio file inside the folder and read its metadata to get its Title tag and search it inside the requested song list, and if found, will check if the requested metadata has a trackExplicitness tag.
+`Artist -> Album(s) -> Song(s)`
 
-If it does, the script will write the content of the tag as a comment on the audio file and move to the next file.
+When started, the script will read the name of the root folder and will make a first request to the iTunes Search API to request the `artistID` field. If the artist exists on the database, the script will then make a second request to get all albums by the artist.
+
+With the list of albums in memory, the script will look at each folder inside of the Artist folder, get its name, and try to find an object inside of the requested albums list whose `collectionID` tag matches the name of the folder.
+
+**By default**, if the script can't get a match, it will throw a warning and move into the next folder if there's one. This behavior can be changed  by appending the `-c` flag to the initial command; in that case, the script will show some similar results and let the user manually select if one of them is the album they were trying to search.
+
+Once there's a match, either automatic or manual, the script will make a new request to the API to download the list of songs of that album.
+
+Then, for each file inside of the Album folder, the script will use `eyed3` to load the file metadata. It will then try to match the file's `Title` tag with the `trackName` tag in the requested song list. As with the album, if there's no automatic match, the song will be skipped, and this behavior can be changed with the `-c` flag.
+
+After matching, the script will check the `trackExplicitness` tag of the song (either `notExplicit`, `explicit` or `cleaned`) and write a `ITUNESADVISORY` tag in the audio file with a number related to the result (`0`,`1` or `2`).
+
+This process will repeat until every file of every folder inside the root folder has been scanned. At the end, the script will show how many songs were tagged (automatically or manually) and how many couldn't be matched with iTunes' database.
+
+### Rate limit
+iTunes' Search API is rate-limited to 20 requests per minute. To respect this, the script tracks the timestamp of every request it makes. If the rate-limit is reached, the script will notify the user and halt operation for 60 seconds.
+
+### Why?
+
+This script is useful in very specific circustances. In most cases, a standard file tagger with compatibility with the iTunes API will allow the user to request the `trackExplicitness` track along the rest of the metadata. However, in the case of an user with an existing music organization system wanting to get this tag but not to touch any other metadata, this scripts brings a quick and dirty way of doing exactly that.
+
+It also served for me as a way of practicing my quite rusty Python and to experiment with both the `requests` and `eye3d` libraries.
+
+### Contributing
+Any pull requests are welcome!
