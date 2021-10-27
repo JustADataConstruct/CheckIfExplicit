@@ -94,19 +94,28 @@ class CheckForExplicit():
                 if self.mode == "-s":
                     print("Song not found!")
                     self.errorSongs.append(fullpath + "/" + file)
-                continue
+                    continue
+                else:
+                    find = self.tryToFind(cleaned,songs,"trackName",1)
+                    if find != {}:
+                        result = [find]
+                    else:
+                        print("Song not found!")
+                        self.errorSongs.append(fullpath + "/" + file)
+                        continue
             explicit = result[0]["trackExplicitness"]
             if len(metadata.tag.user_text_frames) > 0 and "ITUNESADVISORY" in metadata.tag.user_text_frames:
                 print("This song is already tagged, skipping...")
                 continue
             metadata.tag.user_text_frames.set(str(ratings[explicit]),"ITUNESADVISORY")
             metadata.tag.save()
+            print("Song tagged! " + title + f"({explicit}")
             self.taggedSongs.append(fullpath + "/" + file)
 
 
-    def tryToFind(self,title:str, collection:list, tag:str) -> dict:
+    def tryToFind(self,title:str, collection:list, tag:str, start:int=0) -> dict:
         word = title[0:5]
-        results = [a for a in collection if a["wrapperType"] != "artist" and word.lower() in a[tag].lower()]
+        results = [a for a in collection[start:] if a["wrapperType"] != "artist" and word.lower() in a[tag].lower()]
         print("I couldn't find this item, but I found some suggestions. If you can see the correct element in this list, write its number and press enter, or just press enter to skip.")
         for (i, item) in enumerate(results):
             print(f"[{i}] {item[tag]}")
