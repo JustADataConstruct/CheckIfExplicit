@@ -149,7 +149,6 @@ class CheckForExplicit():
         while completed == False:
             time = datetime.now()
             self.requestCount[:] = [x for x in self.requestCount if int(round(abs((time - x).total_seconds()) / 60)) < 1]
-            print(len(self.requestCount))
             if len(self.requestCount) > 19:
                 print("iTunes Search API is rate-limited to 20 requests for minute. Trying again in 60 seconds...")
                 sleep(60)
