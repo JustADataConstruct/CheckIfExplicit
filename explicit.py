@@ -4,6 +4,8 @@ import sys
 import os
 from datetime import datetime
 from time import sleep
+from colorama import init
+from printColor import printError, printInfo, printWarning, printSuccess
 
 class CheckForExplicit():
     def __init__(self):
@@ -14,46 +16,46 @@ class CheckForExplicit():
             return
         self.mode = sys.argv[2] if len(sys.argv) == 3 else "-s"
         self.requestCount = []
+        init(autoreset=True)
         self.main()
 
     def main(self) -> bool:
         artistID = self.getArtistId(sys.argv[1].split("/")[-1])
         if artistID == -1:
-            print("Artist not found.")
+            printError("Artist not found.")
             return False
         albums = self.getAllAlbumsByArtist(artistID)
         if len(albums) == 0:
-            print("Albums not found")
+            printError("Albums not found")
             return False
         if self.readFolders(albums):
-            print("Tagged songs: " + str(len(self.taggedSongs)))
-            print("\n".join(self.taggedSongs))
+            printInfo("Tagged songs: " + str(len(self.taggedSongs)))
+            printInfo("\n".join(self.taggedSongs))
             print("\n---------\n")
-            print("Songs not found: " + str(len(self.errorSongs)))
-            print("\n".join(self.errorSongs))
+            printError("Songs not found: " + str(len(self.errorSongs)))
+            printError("\n".join(self.errorSongs))
         return True
 
     def getArtistId(self, artistName:str) -> int:
-        print("Searching for: " + artistName)
+        printInfo("Searching for: " + artistName)
         self.handleRateLimit()
         response = requests.get('https://itunes.apple.com/search?term=' + artistName + '&entity=allArtist&attribute=allArtistTerm')
         if response.ok:
             o = response.json()
             return o['results'][0]["artistId"]
         else:
-            print("Something went wrong getting the request (Rate limited?)")
-            #TODO: Do something about the rate limit.
+            printError("Something went wrong getting the request (Rate limited?)")
             return -1
 
     def getAllAlbumsByArtist(self, artistId:int) -> list:
-        print("Getting all albums")
+        printInfo("Getting all albums")
         self.handleRateLimit()
         response = requests.get('https://itunes.apple.com/lookup?id=' + str(artistId) + '&entity=album')
         if response.ok:
             o = response.json()
             return o["results"]
         else:
-            print("Something went wrong while loading the album list (Rate limited?)")
+            printError("Something went wrong while loading the album list (Rate limited?)")
             return []
 
     def readFolders(self, albums:list) -> bool:
@@ -70,11 +72,11 @@ class CheckForExplicit():
                         return False
                 else:
                     if self.mode == "-s":
-                        print("Album not found!")
+                        printError("Album not found!")
                     else:
                         find = self.tryToFind(name, albums,"collectionName")
                         if len(find) == 0:
-                            print("Album not found")
+                            printError("Album not found")
                         else:
                             songs = self.getSongs(find["collectionId"])
                             self.handleAlbum(fullpath,songs)
@@ -91,12 +93,12 @@ class CheckForExplicit():
                 continue
             metadata = eyed3.load(fullpath + "/" + file)
             title = metadata.tag.title
-            print("Searching song: "+ title)
+            printInfo("Searching song: "+ title)
             cleaned = title.split("(")[0].split("[")[0] #Get the first part of a song before parenthesis, to maximize chance of finding results.
             result = [a for a in songs if a["wrapperType"] != "collection" and cleaned.lower() in a["trackName"].lower()]
             if len(result) == 0:
                 if self.mode == "-s":
-                    print("Song not found!")
+                    printError("Song not found!")
                     self.errorSongs.append(fullpath + "/" + file)
                     continue
                 else:
@@ -104,23 +106,23 @@ class CheckForExplicit():
                     if find != {}:
                         result = [find]
                     else:
-                        print("Song not found!")
+                        printError("Song not found!")
                         self.errorSongs.append(fullpath + "/" + file)
                         continue
             explicit = result[0]["trackExplicitness"]
             if len(metadata.tag.user_text_frames) > 0 and "ITUNESADVISORY" in metadata.tag.user_text_frames:
-                print("This song is already tagged, skipping...")
+                printWarning("This song is already tagged, skipping...")
                 continue
             metadata.tag.user_text_frames.set(str(ratings[explicit]),"ITUNESADVISORY")
             metadata.tag.save()
-            print("Song tagged! " + title + f"({explicit}")
+            printSuccess("Song tagged! " + title + f"({explicit}")
             self.taggedSongs.append(fullpath + "/" + file)
 
 
     def tryToFind(self,title:str, collection:list, tag:str, start:int=0) -> dict:
         word = title[0:5]
         results = [a for a in collection[start:] if a["wrapperType"] != "artist" and word.lower() in a[tag].lower()]
-        print("I couldn't find this item, but I found some suggestions. If you can see the correct element in this list, write its number and press enter, or just press enter to skip.")
+        printWarning("I couldn't find this item, but I found some suggestions. If you can see the correct element in this list, write its number and press enter, or just press enter to skip.")
         for (i, item) in enumerate(results):
             print(f"[{i}] {item[tag]}")
         choice = input()
@@ -129,14 +131,14 @@ class CheckForExplicit():
         return results[int(choice)]
 
     def getSongs(self, id:int) -> list:
-        print("Getting songs...")
+        printInfo("Getting songs...")
         self.handleRateLimit()
         response = requests.get('https://itunes.apple.com/lookup?id='+str(id)+'&entity=song')
         if response.ok:
             o = response.json()
             return o['results']
         else:
-            print("Something went wrong while getting the song list (Rate limited?)")
+            printError("Something went wrong while getting the song list (Rate limited?)")
             return []
 
     def printHelp(self):
@@ -150,7 +152,7 @@ class CheckForExplicit():
             time = datetime.now()
             self.requestCount[:] = [x for x in self.requestCount if int(round(abs((time - x).total_seconds()) / 60)) < 1]
             if len(self.requestCount) > 19:
-                print("iTunes Search API is rate-limited to 20 requests for minute. Trying again in 60 seconds...")
+                printWarning("iTunes Search API is rate-limited to 20 requests for minute. Trying again in 60 seconds...")
                 sleep(60)
             else:
                 self.requestCount.append(time)
