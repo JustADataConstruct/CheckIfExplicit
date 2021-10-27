@@ -2,6 +2,8 @@ import requests
 import eyed3
 import sys
 import os
+from datetime import datetime
+from time import sleep
 
 class CheckForExplicit():
     def __init__(self):
@@ -10,8 +12,8 @@ class CheckForExplicit():
         if len(sys.argv) == 1:
             self.printHelp()
             return
-        print(len(sys.argv))
-        self.mode = sys.argv[2] if len(sys.argv) == 3 else "-s" 
+        self.mode = sys.argv[2] if len(sys.argv) == 3 else "-s"
+        self.requestCount = []
         self.main()
 
     def main(self) -> bool:
@@ -33,6 +35,7 @@ class CheckForExplicit():
 
     def getArtistId(self, artistName:str) -> int:
         print("Searching for: " + artistName)
+        self.handleRateLimit()
         response = requests.get('https://itunes.apple.com/search?term=' + artistName + '&entity=allArtist&attribute=allArtistTerm')
         if response.ok:
             o = response.json()
@@ -44,6 +47,7 @@ class CheckForExplicit():
 
     def getAllAlbumsByArtist(self, artistId:int) -> list:
         print("Getting all albums")
+        self.handleRateLimit()
         response = requests.get('https://itunes.apple.com/lookup?id=' + str(artistId) + '&entity=album')
         if response.ok:
             o = response.json()
@@ -126,6 +130,7 @@ class CheckForExplicit():
 
     def getSongs(self, id:int) -> list:
         print("Getting songs...")
+        self.handleRateLimit()
         response = requests.get('https://itunes.apple.com/lookup?id='+str(id)+'&entity=song')
         if response.ok:
             o = response.json()
@@ -138,6 +143,22 @@ class CheckForExplicit():
         print("USAGE: explicit.py <Path to Artist Folder> [-s / -c]")
         print("-s (Optional): Skip any unknown albums/songs (default)")
         print("-c (Optional): Try to suggest options for unknown albums/songs")
+    
+    def handleRateLimit(self):
+        completed = False
+        while completed == False:
+            time = datetime.now()
+            self.requestCount[:] = [x for x in self.requestCount if int(round(abs((time - x).total_seconds()) / 60)) < 1]
+            print(len(self.requestCount))
+            if len(self.requestCount) > 19:
+                print("iTunes Search API is rate-limited to 20 requests for minute. Trying again in 60 seconds...")
+                sleep(60)
+            else:
+                self.requestCount.append(time)
+                completed = True
+
+
+
 
 if __name__  == "__main__":
     CheckForExplicit()
