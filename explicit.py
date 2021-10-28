@@ -7,21 +7,34 @@ from time import sleep
 from colorama import init
 from printColor import printError, printInfo, printWarning, printSuccess
 import difflib
+import argparse
 
 class CheckForExplicit():
     def __init__(self):
         self.taggedSongs = []
         self.errorSongs = []
+        self.folder = ""
+        self.country = "us"
         if len(sys.argv) == 1:
             self.printHelp()
             return
-        self.mode = sys.argv[2] if len(sys.argv) == 3 else "-s"
         self.requestCount = []
         init(autoreset=True)
+        self.checkMode = False
+        self.parser = argparse.ArgumentParser(add_help=True)
+        self.parser.add_argument("folder")
+        self.parser.add_argument("-c","--check",action="store_true")
+        self.parse_args(self.parser.parse_args())
         self.main()
 
+    def parse_args(self,args):
+        print(args)
+        if args.check:
+            self.checkMode = True
+        self.folder = args.folder
+
     def main(self) -> bool:
-        artistID = self.getArtistId(sys.argv[1].split("/")[-1])
+        artistID = self.getArtistId(self.folder.split("/")[-1])
         if artistID == -1:
             printError("Artist not found.")
             return False
@@ -71,7 +84,7 @@ class CheckForExplicit():
                     if len(songs) == 0:
                         return False
                 else:
-                    if self.mode == "-s":
+                    if self.checkMode == False:
                         printError("Album not found! Run the command again with the -c flag to check options.")
                         self.errorSongs.append(fullpath + "/*")
                     else:
@@ -98,7 +111,7 @@ class CheckForExplicit():
             printInfo("Searching song: "+ title)
             result = [a for a in songs if a["wrapperType"] != "collection" and title.lower() == a["trackName"].lower()]
             if len(result) == 0:
-                if self.mode == "-s":
+                if self.checkMode == False:
                     printError("Song not found! Run the command again with the -c flag to check options.")
                     self.errorSongs.append(fullpath + "/" + file)
                     continue
@@ -122,7 +135,7 @@ class CheckForExplicit():
 
     def tryToFind(self,title:str, collection:list, tag:str, start:int=0) -> dict:
         names = [a[tag] for a in collection[start:] if a["wrapperType"] != "artist"]
-        matches = difflib.get_close_matches(title,names,5)
+        matches = difflib.get_close_matches(title,names,10,0.3)
         if len(matches) == 0:
             return {}
         printWarning("I couldn't find this item, but I found some suggestions. If you can see the correct element in this list, write its number and press enter, or just press enter to skip.")
