@@ -6,6 +6,7 @@ from datetime import datetime
 from time import sleep
 from colorama import init
 from printColor import printError, printInfo, printWarning, printSuccess
+import difflib
 
 class CheckForExplicit():
     def __init__(self):
@@ -63,8 +64,7 @@ class CheckForExplicit():
             fullpath = sys.argv[1] + "/" + name
             if os.path.isdir(fullpath):
                 print("Searching for album: " + name)
-                cleanedAlbum = name.split("(")[0].split("[")[0]
-                results = [a for a in albums if a["wrapperType"] != "artist" and cleanedAlbum.lower() in a["collectionName"].lower()]
+                results = [a for a in albums if a["wrapperType"] != "artist" and name.lower() == a["collectionName"].lower()]
                 if len(results) != 0:
                     songs = self.getSongs(results[0]["collectionId"])
                     self.handleAlbum(fullpath,songs)
@@ -72,11 +72,13 @@ class CheckForExplicit():
                         return False
                 else:
                     if self.mode == "-s":
-                        printError("Album not found!")
+                        printError("Album not found! Run the command again with the -c flag to check options.")
+                        self.errorSongs.append(fullpath + "/*")
                     else:
                         find = self.tryToFind(name, albums,"collectionName")
                         if len(find) == 0:
                             printError("Album not found")
+                            self.errorSongs.append(fullpath + "/*")
                         else:
                             songs = self.getSongs(find["collectionId"])
                             self.handleAlbum(fullpath,songs)
@@ -94,15 +96,14 @@ class CheckForExplicit():
             metadata = eyed3.load(fullpath + "/" + file)
             title = metadata.tag.title
             printInfo("Searching song: "+ title)
-            cleaned = title.split("(")[0].split("[")[0] #Get the first part of a song before parenthesis, to maximize chance of finding results.
-            result = [a for a in songs if a["wrapperType"] != "collection" and cleaned.lower() in a["trackName"].lower()]
+            result = [a for a in songs if a["wrapperType"] != "collection" and title.lower() == a["trackName"].lower()]
             if len(result) == 0:
                 if self.mode == "-s":
-                    printError("Song not found!")
+                    printError("Song not found! Run the command again with the -c flag to check options.")
                     self.errorSongs.append(fullpath + "/" + file)
                     continue
                 else:
-                    find = self.tryToFind(cleaned,songs,"trackName",1)
+                    find = self.tryToFind(title,songs,"trackName",1)
                     if find != {}:
                         result = [find]
                     else:
@@ -120,15 +121,18 @@ class CheckForExplicit():
 
 
     def tryToFind(self,title:str, collection:list, tag:str, start:int=0) -> dict:
-        word = title[0:5]
-        results = [a for a in collection[start:] if a["wrapperType"] != "artist" and word.lower() in a[tag].lower()]
-        printWarning("I couldn't find this item, but I found some suggestions. If you can see the correct element in this list, write its number and press enter, or just press enter to skip.")
-        for (i, item) in enumerate(results):
-            print(f"[{i}] {item[tag]}")
-        choice = input()
-        if choice == "" or int(choice) > len(results):
+        names = [a[tag] for a in collection[start:] if a["wrapperType"] != "artist"]
+        matches = difflib.get_close_matches(title,names,5)
+        if len(matches) == 0:
             return {}
-        return results[int(choice)]
+        printWarning("I couldn't find this item, but I found some suggestions. If you can see the correct element in this list, write its number and press enter, or just press enter to skip.")
+        for (i, item) in enumerate(matches):
+            print(f"[{i}] {item}")
+        choice = input()
+        if choice == "" or int(choice) > len(matches):
+            return {}
+        results = [a for a in collection[start:] if a["wrapperType"] != "artist" and a[tag] == matches[int(choice)]]
+        return results[0]
 
     def getSongs(self, id:int) -> list:
         printInfo("Getting songs...")
