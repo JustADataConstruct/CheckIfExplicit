@@ -24,6 +24,7 @@ class CheckForExplicit():
         self.parser = argparse.ArgumentParser(add_help=True)
         self.parser.add_argument("folder")
         self.parser.add_argument("-c","--check",action="store_true")
+        self.parser.add_argument("-co","--country")
         self.parse_args(self.parser.parse_args())
         self.main()
 
@@ -31,6 +32,8 @@ class CheckForExplicit():
         print(args)
         if args.check:
             self.checkMode = True
+        if args.country is not None:
+            self.country = args.country[:2]
         self.folder = args.folder
 
     def main(self) -> bool:
@@ -53,7 +56,7 @@ class CheckForExplicit():
     def getArtistId(self, artistName:str) -> int:
         printInfo("Searching for: " + artistName)
         self.handleRateLimit()
-        response = requests.get('https://itunes.apple.com/search?term=' + artistName + '&entity=allArtist&attribute=allArtistTerm')
+        response = requests.get('https://itunes.apple.com/search?term=' + artistName + '&entity=allArtist&attribute=allArtistTerm&country=' + self.country)
         if response.ok:
             o = response.json()
             return o['results'][0]["artistId"]
@@ -64,7 +67,7 @@ class CheckForExplicit():
     def getAllAlbumsByArtist(self, artistId:int) -> list:
         printInfo("Getting all albums")
         self.handleRateLimit()
-        response = requests.get('https://itunes.apple.com/lookup?id=' + str(artistId) + '&entity=album')
+        response = requests.get('https://itunes.apple.com/lookup?id=' + str(artistId) + '&entity=album&country='+self.country)
         if response.ok:
             o = response.json()
             return o["results"]
@@ -81,8 +84,6 @@ class CheckForExplicit():
                 if len(results) != 0:
                     songs = self.getSongs(results[0]["collectionId"])
                     self.handleAlbum(fullpath,songs)
-                    if len(songs) == 0:
-                        return False
                 else:
                     if self.checkMode == False:
                         printError("Album not found! Run the command again with the -c flag to check options.")
@@ -171,9 +172,9 @@ class CheckForExplicit():
             return []
 
     def printHelp(self):
-        print("USAGE: explicit.py <Path to Artist Folder> [-s / -c]")
-        print("-s (Optional): Skip any unknown albums/songs (default)")
+        print("USAGE: explicit.py <Path to Artist Folder> [-c] [-co COUNTRYCODE]")
         print("-c (Optional): Try to suggest options for unknown albums/songs")
+        print("-co [COUNTRYCODE] (Optional): Search in the store of the selected country. Default: us")
     
     def handleRateLimit(self):
         completed = False
