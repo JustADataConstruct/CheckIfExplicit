@@ -93,6 +93,13 @@ class CheckForExplicit():
                             printError("Album not found")
                             self.errorSongs.append(fullpath + "/*")
                         else:
+                            printWarning("Would you like to rename the folder to the correct album name? (y/n)")
+                            printWarning(f"{name} -> {find['collectionName']}")
+                            choice = input()
+                            if choice == "y":
+                                oPath = fullpath
+                                fullpath = sys.argv[1] +"/" + find["collectionName"]
+                                os.rename(oPath,fullpath)
                             songs = self.getSongs(find["collectionId"])
                             self.handleAlbum(fullpath,songs)
         return True
@@ -119,6 +126,11 @@ class CheckForExplicit():
                     find = self.tryToFind(title,songs,"trackName",1)
                     if find != {}:
                         result = [find]
+                        printWarning("Would you like to change the title tag to the correct song name? (y/n)")
+                        printWarning(f"{title} -> {find['trackName']}")
+                        choice = input()
+                        if choice == "y":
+                            metadata.tag.title = find["trackName"]
                     else:
                         printError("Song not found!")
                         self.errorSongs.append(fullpath + "/" + file)
