@@ -4,7 +4,12 @@ A Python script to check if a particular song, adequately tagged, is marked as "
 ### Install
 - Download or clone the repository
 - Run `pip install -r requeriments.txt` to install the required libraries
-- Run `explicit.py <FOLDER PATH> [-c]`
+- Run `explicit.py <FOLDER PATH> [-m] [-co COUNTRYCODE] [-a]`
+
+### Flags
+`-m`: **(Optional)** Manual mode. If the script can't do an automatic match, it will ask the user to select the closest option from a list.
+`-co COUNTRYCODE` **(Optional)** Country code from the store the user wishes to query. **Default:** US
+`-a` **(Optional)** Approximate search. When searching album/song names, the script will try to match with the closest option it can find instead of trying to do an exact match.
 
 ### Usage
 
@@ -14,13 +19,17 @@ The script expects as its first argument a path to a folder named as an Artist, 
 
 When started, the script will read the name of the root folder and will make a first request to the iTunes Search API to request the `artistID` field. If the artist exists on the database, the script will then make a second request to get all albums by the artist.
 
-With the list of albums in memory, the script will look at each folder inside of the Artist folder, get its name, and try to find an object inside of the requested albums list whose `collectionID` tag matches the name of the folder.
+With the list of albums in memory, the script will look at each folder inside of the Artist folder, get its name, and try to find an object inside of the requested albums list whose `collectionName` tag matches the name of the folder.
 
-**By default**, if the script can't get a match, it will throw a warning and move into the next folder if there's one. This behavior can be changed  by appending the `-c` flag to the initial command; in that case, the script will show some similar results and let the user manually select if one of them is the album they were trying to search.
+**By default**, if the script can't get a match, it will throw a warning and move into the next folder if there's one. This behavior can be changed  by appending the `-m` flag to the initial command; in that case, the script will show some similar results and let the user manually select if one of them is the album they were trying to search.
+
+The user can also use the `-a` flag to do an approximated search. In this case, instead of trying to get an exact match, the script will try to get the closest match possible. While this requires less user interaction, it also comes with a greater chance of false results, and should be used with caution.
+
+If there's no match, but the user knows the album/song is available on Apple Music, they can change the country's store the script is changing with the `-co` flag. By default, the script checks the US store, but it supports any [two letter country code.](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
 
 Once there's a match, either automatic or manual, the script will make a new request to the API to download the list of songs of that album.
 
-Then, for each file inside of the Album folder, the script will use `eyed3` to load the file metadata. It will then try to match the file's `Title` tag with the `trackName` tag in the requested song list. As with the album, if there's no automatic match, the song will be skipped, and this behavior can be changed with the `-c` flag.
+Then, for each file inside of the Album folder, the script will use `eyed3` to load the file metadata. It will then try to match the file's `Title` tag with the `trackName` tag in the requested song list. As with the album, if there's no automatic match, the song will be skipped, and this behavior can be changed with the `-m` and `-a` flags.
 
 After matching, the script will check the `trackExplicitness` tag of the song (either `notExplicit`, `explicit` or `cleaned`) and write a `ITUNESADVISORY` tag in the audio file with a number related to the result (`0`,`1` or `2`).
 

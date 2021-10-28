@@ -21,10 +21,12 @@ class CheckForExplicit():
         self.requestCount = []
         init(autoreset=True)
         self.checkMode = False
+        self.exactSearch = True
         self.parser = argparse.ArgumentParser(add_help=True)
         self.parser.add_argument("folder")
-        self.parser.add_argument("-c","--check",action="store_true")
+        self.parser.add_argument("-m","--manual",action="store_true")
         self.parser.add_argument("-co","--country")
+        self.parser.add_argument("-a","--approx", action="store_true")
         self.parse_args(self.parser.parse_args())
         self.main()
 
@@ -34,6 +36,8 @@ class CheckForExplicit():
             self.checkMode = True
         if args.country is not None:
             self.country = args.country[:2]
+        if args.approx:
+            self.exactSearch = False
         self.folder = args.folder
 
     def main(self) -> bool:
@@ -80,13 +84,19 @@ class CheckForExplicit():
             fullpath = sys.argv[1] + "/" + name
             if os.path.isdir(fullpath):
                 print("Searching for album: " + name)
-                results = [a for a in albums if a["wrapperType"] != "artist" and name.lower() == a["collectionName"].lower()]
+                if self.exactSearch:
+                    results = [a for a in albums if a["wrapperType"] != "artist" and name.lower() == a["collectionName"].lower()]
+                else:
+                    names = [a["collectionName"] for a in albums if a["wrapperType"] != "artist"]
+                    names = sorted(names,key=lambda x:difflib.SequenceMatcher(None,x,name).ratio())
+                    results = [a for a in albums if a["wrapperType"] != "artist" and a["collectionName"] == names[-1]]
                 if len(results) != 0:
+                    printInfo(f"Album found: {results[0]['collectionName']}")
                     songs = self.getSongs(results[0]["collectionId"])
                     self.handleAlbum(fullpath,songs)
                 else:
                     if self.checkMode == False:
-                        printError("Album not found! Run the command again with the -c flag to check options.")
+                        printError("Album not found! Run the command again with the -m flag to check options.")
                         self.errorSongs.append(fullpath + "/*")
                     else:
                         find = self.tryToFind(name, albums,"collectionName")
@@ -117,10 +127,15 @@ class CheckForExplicit():
             metadata = eyed3.load(fullpath + "/" + file)
             title = metadata.tag.title
             printInfo("Searching song: "+ title)
-            result = [a for a in songs if a["wrapperType"] != "collection" and title.lower() == a["trackName"].lower()]
+            if self.exactSearch:
+                result = [a for a in songs if a["wrapperType"] != "collection" and title.lower() == a["trackName"].lower()]
+            else:
+                names = [a["trackName"] for a in songs if a["wrapperType"] != "collection"]
+                names = sorted(names,key=lambda x:difflib.SequenceMatcher(None,x,title).ratio())
+                result = [a for a in songs if a["wrapperType"] != "artist" and a["trackName"] == names[-1]]
             if len(result) == 0:
                 if self.checkMode == False:
-                    printError("Song not found! Run the command again with the -c flag to check options.")
+                    printError("Song not found! Run the command again with the -m flag to check options.")
                     self.errorSongs.append(fullpath + "/" + file)
                     continue
                 else:
@@ -136,6 +151,7 @@ class CheckForExplicit():
                         printError("Song not found!")
                         self.errorSongs.append(fullpath + "/" + file)
                         continue
+            printInfo(f"Song found: {result[0]['trackName']}")
             explicit = result[0]["trackExplicitness"]
             if len(metadata.tag.user_text_frames) > 0 and "ITUNESADVISORY" in metadata.tag.user_text_frames:
                 printWarning("This song is already tagged, skipping...")
@@ -172,9 +188,10 @@ class CheckForExplicit():
             return []
 
     def printHelp(self):
-        print("USAGE: explicit.py <Path to Artist Folder> [-c] [-co COUNTRYCODE]")
-        print("-c (Optional): Try to suggest options for unknown albums/songs")
+        print("USAGE: explicit.py <Path to Artist Folder> [-m] [-co COUNTRYCODE]")
+        print("-m (Optional): Try to suggest options for unknown albums/songs")
         print("-co [COUNTRYCODE] (Optional): Search in the store of the selected country. Default: us")
+        print("-a (Optional): Approximation mode. The script will search for similar album/song titles instead of exact matches. Requires less user interaction, but there's higher possibility of false results.")
     
     def handleRateLimit(self):
         completed = False
