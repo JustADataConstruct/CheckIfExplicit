@@ -8,7 +8,9 @@ A Python script to check if a particular song, adequately tagged, is marked as "
 
 ### Flags
 `-m`: **(Optional)** Manual mode. If the script can't do an automatic match, it will ask the user to select the closest option from a list.
+
 `-co COUNTRYCODE` **(Optional)** Country code from the store the user wishes to query. **Default:** US
+
 `-a` **(Optional)** Approximate search. When searching album/song names, the script will try to match with the closest option it can find instead of trying to do an exact match.
 
 ### Usage
