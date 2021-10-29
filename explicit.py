@@ -22,11 +22,15 @@ class CheckForExplicit():
         init(autoreset=True)
         self.checkMode = False
         self.exactSearch = True
+        self.singleFolder = ""
+        self.noRename = False
         self.parser = argparse.ArgumentParser(add_help=True)
         self.parser.add_argument("folder")
         self.parser.add_argument("-m","--manual",action="store_true")
         self.parser.add_argument("-co","--country")
         self.parser.add_argument("-a","--approx", action="store_true")
+        self.parser.add_argument("-s","--single")
+        self.parser.add_argument("-nr","--no_rename",action="store_true")
         self.parse_args(self.parser.parse_args())
         self.main()
 
@@ -38,6 +42,10 @@ class CheckForExplicit():
             self.country = args.country[:2]
         if args.approx:
             self.exactSearch = False
+        if args.single is not None:
+            self.singleFolder = args.single
+        if args.no_rename:
+            self.noRename = True
         self.folder = args.folder
 
     def main(self) -> bool:
@@ -49,12 +57,18 @@ class CheckForExplicit():
         if len(albums) == 0:
             printError("Albums not found")
             return False
-        if self.readFolders(albums):
-            printInfo("Tagged songs: " + str(len(self.taggedSongs)))
-            printInfo("\n".join(self.taggedSongs))
-            print("\n---------\n")
-            printError("Songs not found: " + str(len(self.errorSongs)))
-            printError("\n".join(self.errorSongs))
+        if self.singleFolder != "":
+            fullpath = self.folder + "/" + self.singleFolder
+            self.readFolders(albums,fullpath)
+        else:
+            for name in os.listdir(sys.argv[1]):
+                fullpath = sys.argv[1] + "/" + name
+                self.readFolders(albums,fullpath)
+        printInfo("Tagged songs: " + str(len(self.taggedSongs)))
+        printInfo("\n".join(self.taggedSongs))
+        print("\n---------\n")
+        printError("Songs not found: " + str(len(self.errorSongs)))
+        printError("\n".join(self.errorSongs))
         return True
 
     def getArtistId(self, artistName:str) -> int:
@@ -79,31 +93,31 @@ class CheckForExplicit():
             printError("Something went wrong while loading the album list (Rate limited?)")
             return []
 
-    def readFolders(self, albums:list) -> bool:
-        for name in os.listdir(sys.argv[1]):
-            fullpath = sys.argv[1] + "/" + name
-            if os.path.isdir(fullpath):
-                print("Searching for album: " + name)
-                if self.exactSearch:
-                    results = [a for a in albums if a["wrapperType"] != "artist" and name.lower() == a["collectionName"].lower()]
+    def readFolders(self, albums:list, fullpath:str) -> bool:
+        if os.path.isdir(fullpath):
+            name = fullpath.split("/")[-1]
+            print("Searching for album: " + name)
+            if self.exactSearch:
+                results = [a for a in albums if a["wrapperType"] != "artist" and name.lower() == a["collectionName"].lower()]
+            else:
+                names = [a["collectionName"] for a in albums if a["wrapperType"] != "artist"]
+                names = sorted(names,key=lambda x:difflib.SequenceMatcher(None,x,name).ratio())
+                results = [a for a in albums if a["wrapperType"] != "artist" and a["collectionName"] == names[-1]]
+            if len(results) != 0:
+                printInfo(f"Album found: {results[0]['collectionName']}")
+                songs = self.getSongs(results[0]["collectionId"])
+                self.handleAlbum(fullpath,songs)
+            else:
+                if self.checkMode == False:
+                    printError("Album not found! Run the command again with the -m flag to check options.")
+                    self.errorSongs.append(fullpath + "/*")
                 else:
-                    names = [a["collectionName"] for a in albums if a["wrapperType"] != "artist"]
-                    names = sorted(names,key=lambda x:difflib.SequenceMatcher(None,x,name).ratio())
-                    results = [a for a in albums if a["wrapperType"] != "artist" and a["collectionName"] == names[-1]]
-                if len(results) != 0:
-                    printInfo(f"Album found: {results[0]['collectionName']}")
-                    songs = self.getSongs(results[0]["collectionId"])
-                    self.handleAlbum(fullpath,songs)
-                else:
-                    if self.checkMode == False:
-                        printError("Album not found! Run the command again with the -m flag to check options.")
+                    find = self.tryToFind(name, albums,"collectionName")
+                    if len(find) == 0:
+                        printError("Album not found")
                         self.errorSongs.append(fullpath + "/*")
                     else:
-                        find = self.tryToFind(name, albums,"collectionName")
-                        if len(find) == 0:
-                            printError("Album not found")
-                            self.errorSongs.append(fullpath + "/*")
-                        else:
+                        if self.noRename == False:
                             printWarning("Would you like to rename the folder to the correct album name? (y/n)")
                             printWarning(f"{name} -> {find['collectionName']}")
                             choice = input()
@@ -111,8 +125,8 @@ class CheckForExplicit():
                                 oPath = fullpath
                                 fullpath = sys.argv[1] +"/" + find["collectionName"]
                                 os.rename(oPath,fullpath)
-                            songs = self.getSongs(find["collectionId"])
-                            self.handleAlbum(fullpath,songs)
+                        songs = self.getSongs(find["collectionId"])
+                        self.handleAlbum(fullpath,songs)
         return True
 
     def handleAlbum(self,fullpath:str, songs:list):
@@ -146,11 +160,12 @@ class CheckForExplicit():
                     find = self.tryToFind(title,songs,"trackName",1)
                     if find != {}:
                         result = [find]
-                        printWarning("Would you like to change the title tag to the correct song name? (y/n)")
-                        printWarning(f"{title} -> {find['trackName']}")
-                        choice = input()
-                        if choice == "y":
-                            metadata.tag.title = find["trackName"]
+                        if self.noRename == False:
+                            printWarning("Would you like to change the title tag to the correct song name? (y/n)")
+                            printWarning(f"{title} -> {find['trackName']}")
+                            choice = input()
+                            if choice == "y":
+                                metadata.tag.title = find["trackName"]
                     else:
                         printError("Song not found!")
                         self.errorSongs.append(fullpath + "/" + file)
@@ -196,6 +211,7 @@ class CheckForExplicit():
         print("-m (Optional): Try to suggest options for unknown albums/songs")
         print("-co [COUNTRYCODE] (Optional): Search in the store of the selected country. Default: us")
         print("-a (Optional): Approximation mode. The script will search for similar album/song titles instead of exact matches. Requires less user interaction, but there's higher possibility of false results.")
+        print("-s [FOLDERNAME] (Optional): Single mode. Write here the name of a folder inside of the Artist folder and the script will only scan that folder.")
     
     def handleRateLimit(self):
         completed = False

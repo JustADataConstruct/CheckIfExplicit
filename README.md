@@ -4,7 +4,7 @@ A Python script to check if a particular song, adequately tagged, is marked as "
 ### Install
 - Download or clone the repository
 - Run `pip install -r requeriments.txt` to install the required libraries
-- Run `explicit.py <FOLDER PATH> [-m] [-co COUNTRYCODE] [-a]`
+- Run `explicit.py <FOLDER PATH> [-m] [-co COUNTRYCODE] [-a] [-s FOLDERNAME] [-nr]`
 
 ### Flags
 `-m`: **(Optional)** Manual mode. If the script can't do an automatic match, it will ask the user to select the closest option from a list.
@@ -12,6 +12,10 @@ A Python script to check if a particular song, adequately tagged, is marked as "
 `-co COUNTRYCODE` **(Optional)** Country code from the store the user wishes to query. **Default:** US
 
 `-a` **(Optional)** Approximate search. When searching album/song names, the script will try to match with the closest option it can find instead of trying to do an exact match.
+
+`-s FOLDERNAME` **(Optional)** Single Album Search. If the user writes here, inside quotation marks, the name of a folder that is inside of the Artist folder as indicated on the first argument, the script will only scan that folder.
+
+`-nr` **(Optional)** No Rename. By default, if the script can't find an automatic match and the user has selected an option from the suggestion list, the script will offer to rename the Album/Song to match Apple's data. This flag will skip this question.
 
 ### Usage
 
