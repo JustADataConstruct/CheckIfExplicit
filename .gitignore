@@ -1,5 +1,4 @@
 
-old/*
 venv/*
 music/*
 idea.txt
@@ -7,3 +6,5 @@ idea.txt
 debug_cleanComments.py
 __pycache__/*
 
+
+.vscode/*

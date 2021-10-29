@@ -32,7 +32,7 @@ class CheckForExplicit():
 
     def parse_args(self,args):
         print(args)
-        if args.check:
+        if args.manual:
             self.checkMode = True
         if args.country is not None:
             self.country = args.country[:2]
@@ -124,8 +124,12 @@ class CheckForExplicit():
         for file in os.listdir(fullpath):
             if (os.path.isdir(file)):
                 continue
-            metadata = eyed3.load(fullpath + "/" + file)
-            title = metadata.tag.title
+            try:
+                metadata = eyed3.load(fullpath + "/" + file)
+                title = metadata.tag.title
+            except AttributeError as e:
+                printError(f"File {file} is not a audio file, skipping")
+                continue
             printInfo("Searching song: "+ title)
             if self.exactSearch:
                 result = [a for a in songs if a["wrapperType"] != "collection" and title.lower() == a["trackName"].lower()]
@@ -158,7 +162,7 @@ class CheckForExplicit():
                 continue
             metadata.tag.user_text_frames.set(str(ratings[explicit]),"ITUNESADVISORY")
             metadata.tag.save()
-            printSuccess("Song tagged! " + title + f"({explicit}")
+            printSuccess("Song tagged! " + title + f"({explicit})")
             self.taggedSongs.append(fullpath + "/" + file)
 
 
