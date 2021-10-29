@@ -1,0 +1,5 @@
+services:
+  checkexplicit:
+    build: .
+    volumes:
+      - <YOUR-FOLDER-PATH-HERE>:/music

@@ -6,6 +6,12 @@ A Python script to check if a particular song, adequately tagged, is marked as "
 - Run `pip install -r requeriments.txt` to install the required libraries
 - Run `explicit.py <FOLDER PATH> [-m] [-co COUNTRYCODE] [-a] [-s FOLDERNAME] [-nr]`
 
+### Docker
+If you have Docker and Docker-Compose in your system, you can use the containerized script without installing it in your system.
+- Download or clone the repository.
+- Edit the last line of `docker-compose.yml` to indicate the path of the folder that contains all of your Artist folders (example: `'./music:/music'`)
+- Run `docker-compose run --rm checkexplicit <ARTIST PATH> [FLAGS]` (example: `docker-compose run --rm checkexplicit ./music/Metallica -m -nr`)
+
 ### Flags
 `-m`: **(Optional)** Manual mode. If the script can't do an automatic match, it will ask the user to select the closest option from a list.
 
