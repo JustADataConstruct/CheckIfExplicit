@@ -61,8 +61,8 @@ class CheckForExplicit():
             fullpath = self.folder + "/" + self.singleFolder
             self.readFolders(albums,fullpath)
         else:
-            for name in os.listdir(sys.argv[1]):
-                fullpath = sys.argv[1] + "/" + name
+            for name in os.listdir(self.folder):
+                fullpath = self.folder + "/" + name
                 self.readFolders(albums,fullpath)
         printInfo("Tagged songs: " + str(len(self.taggedSongs)))
         printInfo("\n".join(self.taggedSongs))
@@ -123,7 +123,7 @@ class CheckForExplicit():
                             choice = input()
                             if choice == "y":
                                 oPath = fullpath
-                                fullpath = sys.argv[1] +"/" + find["collectionName"]
+                                fullpath = self.folder +"/" + find["collectionName"]
                                 os.rename(oPath,fullpath)
                         songs = self.getSongs(find["collectionId"])
                         self.handleAlbum(fullpath,songs)
