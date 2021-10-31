@@ -4,13 +4,13 @@ import sys
 import os
 from datetime import datetime
 from time import sleep
-from colorama import init
-from printColor import printError, printInfo, printWarning, printSuccess
+from printColor import printError, printInfo, printWarning, printSuccess, initPrint
 import difflib
 import argparse
 
 class CheckForExplicit():
     def __init__(self):
+        initPrint()
         self.taggedSongs = []
         self.errorSongs = []
         self.folder = ""
@@ -19,7 +19,6 @@ class CheckForExplicit():
             self.printHelp()
             return
         self.requestCount = []
-        init(autoreset=True)
         self.checkMode = False
         self.exactSearch = True
         self.singleFolder = ""
