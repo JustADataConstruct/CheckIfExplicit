@@ -149,7 +149,7 @@ class CheckForExplicit():
             else:
                 names = [a["trackName"] for a in songs if a["wrapperType"] != "collection"]
                 names = sorted(names,key=lambda x:difflib.SequenceMatcher(None,x,title).ratio())
-                result = [a for a in songs if a["wrapperType"] != "artist" and a["trackName"] == names[-1]]
+                result = [a for a in songs if a["wrapperType"] != "collection" and a["trackName"] == names[-1]]
             if len(result) == 0:
                 if self.checkMode == False:
                     printError("Song not found! Run the command again with the -m flag to check options.")
