@@ -25,9 +25,11 @@ If you have Docker and Docker-Compose in your system, you can use the containeri
 
 ### Usage
 
-The script expects as its first argument a path to a folder named as an Artist, containing one or more folders inside names as an Album, containing one or more audio files inside.
+The script expects as its first argument a path to a folder named as an Artist, containing one or more folders inside named as an Album, containing one or more audio files inside.
 
 `Artist -> Album(s) -> Song(s)`
+
+Example: `python explicit.py music/Metallica`
 
 When started, the script will read the name of the root folder and will make a first request to the iTunes Search API to request the `artistID` field. If the artist exists on the database, the script will then make a second request to get all albums by the artist.
 
