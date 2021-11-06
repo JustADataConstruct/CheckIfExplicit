@@ -148,7 +148,7 @@ class CheckForExplicit():
                 result = [a for a in songs if a["wrapperType"] != "collection" and title.lower() == a["trackName"].lower()]
             else:
                 names = [a["trackName"] for a in songs if a["wrapperType"] != "collection"]
-                names = sorted(names,key=lambda x:difflib.SequenceMatcher(None,x,title).ratio())
+                names = sorted(names,key=lambda x:difflib.SequenceMatcher(None,x,title).ratio()) #FIXME: Too many false results
                 result = [a for a in songs if a["wrapperType"] != "collection" and a["trackName"] == names[-1]]
             if len(result) == 0:
                 if self.checkMode == False:
@@ -171,10 +171,12 @@ class CheckForExplicit():
                         continue
             printInfo(f"Song found: {result[0]['trackName']}")
             explicit = result[0]["trackExplicitness"]
-            if len(metadata.tag.user_text_frames) > 0 and "ITUNESADVISORY" in metadata.tag.user_text_frames:
+            albumExplicit = result[0]["collectionExplicitness"]
+            if len(metadata.tag.user_text_frames) > 0 and "ITUNESADVISORY" in metadata.tag.user_text_frames and "ALBUMADVISORY" in metadata.tag.user_text_frames:
                 printWarning("This song is already tagged, skipping...")
                 continue
             metadata.tag.user_text_frames.set(str(ratings[explicit]),"ITUNESADVISORY")
+            metadata.tag.user_text_frames.set(str(ratings[albumExplicit]),"ALBUMADVISORY")
             metadata.tag.save()
             printSuccess("Song tagged! " + title + f"({explicit})")
             self.taggedSongs.append(fullpath + "/" + file)
