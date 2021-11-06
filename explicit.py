@@ -140,7 +140,7 @@ class CheckForExplicit():
             try:
                 metadata = eyed3.load(fullpath + "/" + file)
                 title = metadata.tag.title
-            except AttributeError as e:
+            except OSError as e:
                 printError(f"File {file} is not a audio file, skipping")
                 continue
             printInfo("Searching song: "+ title)
